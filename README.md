@@ -8,26 +8,26 @@ with convert_obj_three.py
 3D library used: Three.js
 Inspired by awesome tutorials at: http://code.tutsplus.com/search?search%5Bkeywords%5D=webgl
 
-> Setting up the renderer and the camera:
+* Setting up the renderer and the camera:
 Straightforward initialization of the default renderer with
 antialiasing( needs video card to work ), turning on the shadow map to
 enable shadows. Camera is also nothing special - simple perspective camera.
 
-> Setting up the lights:
+* Setting up the lights:
 There are two lights, a main one and a filler one, positioned on different
 sides of the board. The main light casts shadows on object and as such has
 increased shadow fidelity than the default. There's also a skybox to provide
 background lighting, which is a generic cube with only inside rendering. The
 board is set to receive shadows, and the pieces only to cast.
 
-> Setting up the board:
+* Setting up the board:
 Now this is more interesting, the board is procedurally generated, using the
 beginning of coordinates as an origin point. First we generate the squares by
 going through a double loop, the color of the square depends on the count
 being even or odd. After that we add a big flat cube, just a little bit lower
 than the Y of squares.
 
-> Setting up the chess pieces:
+* Setting up the chess pieces:
 We have a $pieces structure, which holds information on what types of pieces
 there are, how many and what are their positions. We also have
 $pieces.color.materials for default material of the color, and
@@ -42,13 +42,13 @@ use the tower model to demonstrate face materials. Note: if you initialize
 geometry without making a backup of it( i.e. cloning ), you may come up with
 dificulties trying to modify it after( particulary with face materials ).
 
-> Animating the picture:
+* Animating the picture:
 The rendering works how you would expect, notable thing is the camera rotation.
 To rotate the camera around the origin point, we use the well known circle eq-
 uation x^2 + y^2 = r^2. To run through the x and z parameters, we are using Cos
 and Sin, since otherwise you would be making half a rotation back and forth.
 
-> Swapping the materials:
+* Swapping the materials:
 Before making changes to materials, we reset some of the parameters:
 $materials array for face material, we recreate the $tower pieces in
 case they were modified with face materials, we reinitialise the board for the
