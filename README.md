@@ -4,8 +4,8 @@ CG_project_Chess_board
 3D webgl chess board with pieces, made by Mark Ganusevich
 
 Models made with: Blender, exported to .obj and converted
-with convert_obj_three.py
-3D library used: Three.js
+with convert_obj_three.py; 
+3D library used: Three.js; 
 Inspired by awesome tutorials at: http://code.tutsplus.com/search?search%5Bkeywords%5D=webgl
 
 * Setting up the renderer and the camera:
@@ -33,7 +33,7 @@ there are, how many and what are their positions. We also have
 $pieces.color.materials for default material of the color, and
 $pieces.color.direction to define how the pieces should be rotated.
 
-First, we go through every pieces type we need( implemented with white, but
+  First, we go through every pieces type we need( implemented with white, but
 black is also okay) and queue their loading. When loading finishes, they are
 passed to a piece creation function which creates a mesh from the data and
 set's it's position/scale/rotation depending on its color and type. If the
@@ -54,10 +54,10 @@ $materials array for face material, we recreate the $tower pieces in
 case they were modified with face materials, we reinitialise the board for the
 same reason, we also reset all materials to basic.
 
-After that we create temporary materials, and just loop through all our
+  After that we create temporary materials, and just loop through all our
 objects changing them, really nothing fascinating.
 
-If we choose to change the face materials, in case of the board, we just
+  If we choose to change the face materials, in case of the board, we just
 generate an array of basics and recreate a new board base with the new array,
 since you can't really modify the material to be a face material after
 creating a mesh. In the case of tower pieces, we do the same, but first we
