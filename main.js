@@ -166,9 +166,12 @@ var pieces = {
 	}
 }
 
+
 //Controls
 var rotate = true;
 var direction = 1;
+var virtual_board = [];
+var objects = [];
 
 //Rendering
 var clock = new THREE.Clock;
@@ -311,6 +314,8 @@ function set_controls(){
 		document.querySelector( ".play-menu-right" ).className = "play-menu-right"; 
 		document.querySelector( ".play-menu-stop" ).className = rotate? "play-menu-stop": document.querySelector( ".play-menu-stop" ).className+" play-menu-unactive"; 
 	};
+
+	document.querySelector( "canvas" ).addEventListener( "click", function( event ) { select_piece( event ); } );
 }
 
 function show_fps( delta ){
@@ -324,6 +329,7 @@ function show_loading(){
 		if( load_progress == 6 ){
 			clearInterval(loading_bar);
 			document.querySelector( ".loading-bar" ).style.opacity = 0;
+			set_virtual_board();
 			render();
 		}
 	}, 100);
@@ -415,6 +421,23 @@ function set_materials_face_for( object ) {
 	}
 }
 
+function select_piece( event ){
+	var vector = new THREE.Vector3( (event.clientX / window.innerWidth) * 2 - 1 , (event.clientY / window.innerHeight) * (-2) + 1 , 1);
+	var projector = new THREE.Projector();
+	var ray = projector.pickingRay( vector, camera );
+	var intersection = ray.intersectObjects( objects );
+
+	if( intersection.length > 0 ){
+
+			var r = Math.random() * 233;
+			var g = Math.random() * 233;
+			var b = Math.random() * 233;
+			intersection[ 0 ].object.position.y++;
+			intersection[ 0 ].object.material = new THREE["Mesh" + "Phong" + "Material"]({ color: new THREE.Color().setRGB( r, g, b ).getHex()} );
+		
+	}
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SCENE SETUP~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function set_pieces() {
@@ -442,6 +465,7 @@ function create_pieces( color, type, geometry, material ){
 		piece.mesh = new THREE.Mesh( geometry, material? material : pieces[color].material );
 		piece.mesh.rotation.y = pieces[color].side * 90 * Math.PI/180;
 		piece.mesh.castShadow = true;
+		piece.mesh.father_chess_info = piece;
 		pos_x = board[piece.x][piece.y].position.x;
 		pos_y = board[piece.x][piece.y].position.y + piece_height/2;
 		pos_z = board[piece.x][piece.y].position.z;
@@ -500,6 +524,25 @@ function set_lights(){
 
 	scene.add( light );
 	scene.add( light_2 );
+}
+
+function set_virtual_board(){
+	for( var i = 0; i < 8; i++ ){
+		virtual_board.push( [] );
+		for (var j = 0; j < 8; j++) {
+			virtual_board[ i ].push( { piece: "empty", color: "empty" } );
+		}
+	}
+
+	for( color in pieces ){
+		for( type in pieces[ color ].types ){
+			for( unit in pieces[ color ].types[ type ] ){
+				var piece = pieces[ color ].types[ type ][ unit ];
+				virtual_board[ piece.x ][ piece.y ] = { piece: type, color: color };
+				objects.push( piece.mesh );			
+			}
+		}
+	}
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ANIMATION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
