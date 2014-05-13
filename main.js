@@ -167,11 +167,123 @@ var pieces = {
 }
 
 
+var piece_movements = {};
+piece_movements[ "tower" ] = [ 
+	[	{ x: 1, z: 0},
+		{ x: 2, z: 0},
+		{ x: 3, z: 0},
+		{ x: 4, z: 0},
+		{ x: 5, z: 0},
+		{ x: 6, z: 0},
+		{ x: 7, z: 0}	],
+
+	[	{ x: -1, z: 0},
+		{ x: -2, z: 0},
+		{ x: -3, z: 0},
+		{ x: -4, z: 0},
+		{ x: -5, z: 0},
+		{ x: -6, z: 0},
+		{ x: -7, z: 0}	],
+
+	[	{ x: 0, z: 1},
+		{ x: 0, z: 2},
+		{ x: 0, z: 3},
+		{ x: 0, z: 4},
+		{ x: 0, z: 5},
+		{ x: 0, z: 6},
+		{ x: 0, z: 7}	],
+
+	[	{ x: 0, z: -1},
+		{ x: 0, z: -2},
+		{ x: 0, z: -3},
+		{ x: 0, z: -4},
+		{ x: 0, z: -5},
+		{ x: 0, z: -6},
+		{ x: 0, z: -7}	]
+	];
+
+
+piece_movements[ "elephant" ] = [ 
+	[	{ x: 1, z: 1},
+		{ x: 2, z: 2},
+		{ x: 3, z: 3},
+		{ x: 4, z: 4},
+		{ x: 5, z: 5},
+		{ x: 6, z: 6},
+		{ x: 7, z: 7}	],
+
+	[	{ x: 1, z: -1},
+		{ x: 2, z: -2},
+		{ x: 3, z: -3},
+		{ x: 4, z: -4},
+		{ x: 5, z: -5},
+		{ x: 6, z: -6},
+		{ x: 7, z: -7}	],
+
+	[	{ x: -1, z: 1},
+		{ x: -2, z: 2},
+		{ x: -3, z: 3},
+		{ x: -4, z: 4},
+		{ x: -5, z: 5},
+		{ x: -6, z: 6},
+		{ x: -7, z: 7}	],
+
+	[	{ x: -1, z: -1},
+		{ x: -2, z: -2},
+		{ x: -3, z: -3},
+		{ x: -4, z: -4},
+		{ x: -5, z: -5},
+		{ x: -6, z: -6},
+		{ x: -7, z: -7}	]
+	];
+
+piece_movements[ "horse" ] = [ 
+		[{ x: 2, z: -1}],
+		[{ x: 2, z: 1}],
+		
+		[{ x: 1, z: -2}],
+		[{ x: 1, z: 2}],
+		
+		[{ x: -2, z: -1}],
+		[{ x: -2, z: 1}],
+		
+		[{ x: -1, z: -2}],
+		[{ x: -1, z: 2}]
+	];
+
+piece_movements[ "queen" ] = [];
+piece_movements[ "queen" ] = piece_movements[ "queen" ].concat( piece_movements[ "tower" ] );
+piece_movements[ "queen" ] = piece_movements[ "queen" ].concat( piece_movements[ "elephant" ] );
+
+piece_movements[ "king" ] = [
+		[{ x: 1, 	z: 0}],
+		[{ x: -1, 	z: 0}],
+		[{ x: 0, 	z: 1}],
+		[{ x: 0, 	z: -1}],
+
+		[{ x: 1, 	z: 1}],
+		[{ x: -1, 	z: 1}],
+		[{ x: 1, 	z: -1}],
+		[{ x: -1, 	z: -1}]	
+];
+
+piece_movements[ "trooper" ] = [
+		[{ x: 1, z: 0, color: "white" }],
+		[{ x: 2, z: 0, color: "white", special: "first_move" }],
+		[{ x: 1, z: 1, color: "white", special: "attack" }],
+		[{ x: 1, z: -1, color: "white", special: "attack" }],
+		
+		[{ x: -1, z: 0, color: "black" }],
+		[{ x: -2, z: 0, color: "black", special: "first_move" }],
+		[{ x: -1, z: 1, color: "black", special: "attack" }],
+		[{ x: -1, z: -1, color: "black", special: "attack" }]
+];
 //Controls
 var rotate = true;
 var direction = 1;
 var virtual_board = [];
 var objects = [];
+var possible_moves = [];
 
 //Rendering
 var clock = new THREE.Clock;
@@ -368,10 +480,8 @@ function set_materials( material, do_reset ) {
 
 	for( var i = 0; i < 8; i++ ){
 		for( var j = 0; j < 8; j++ ){
-			var r = (7*i+j)%2 * (-1) * 233;
-			var g = (7*i+j)%2 * (-1) * 233;
-			var b = (7*i+j)%2 * (-1) * 233;
-			board[i][j].material = new THREE["Mesh" + material + "Material"]({ color: new THREE.Color().setRGB( r, g, b ).getHex()} );
+			var color = (7*i+j)%2 == 0? "rgb(0,0,0)": "rgb(251,253,206)";
+			board[i][j].material = new THREE["Mesh" + material + "Material"]({ color: new THREE.Color( color ) } );
 		};
 	}
 
@@ -426,15 +536,48 @@ function select_piece( event ){
 	var projector = new THREE.Projector();
 	var ray = projector.pickingRay( vector, camera );
 	var intersection = ray.intersectObjects( objects );
+	reset_board_squares();
 
 	if( intersection.length > 0 ){
+			show_movement( intersection[ 0 ].object );
+	}
+}
 
-			var r = Math.random() * 233;
-			var g = Math.random() * 233;
-			var b = Math.random() * 233;
-			intersection[ 0 ].object.position.y++;
-			intersection[ 0 ].object.material = new THREE["Mesh" + "Phong" + "Material"]({ color: new THREE.Color().setRGB( r, g, b ).getHex()} );
-		
+function show_movement( piece ){
+	var new_x;
+	var new_y;
+	var move;
+	var direction;
+	possible_moves = [];
+	for( direction in piece_movements[ piece.father_chess_info.type ] ) {
+		for( movement in piece_movements[ piece.father_chess_info.type ][ direction ] ){
+
+			move = piece_movements[ piece.father_chess_info.type ][ direction ][ movement ];
+			new_x = piece.father_chess_info.object.x + move.x;
+			new_y = piece.father_chess_info.object.y + move.z;
+
+			if( new_x < 8 && new_x > -1 && new_y < 8 && new_y > -1 ){
+				if( virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
+					break;
+				}
+
+				board[ new_x ][	new_y ].material.color = new THREE.Color( "rgb(100,255,255)" );
+				possible_moves.push( move );
+				
+				if( virtual_board[ new_x ][ new_y ].color != "empty" ){
+					break;
+				}
+			}
+		}
+	}
+}
+
+function reset_board_squares(){
+	for( var i = 0; i < 8; i++ ){
+		for( var j = 0; j < 8; j++ ){
+			var color = (7*i+j)%2 == 0? "rgb(0,0,0)": "rgb(251,253,206)";
+			board[ i ][ j ].material.color = new THREE.Color( color );
+		}
 	}
 }
 
@@ -465,7 +608,9 @@ function create_pieces( color, type, geometry, material ){
 		piece.mesh = new THREE.Mesh( geometry, material? material : pieces[color].material );
 		piece.mesh.rotation.y = pieces[color].side * 90 * Math.PI/180;
 		piece.mesh.castShadow = true;
-		piece.mesh.father_chess_info = piece;
+		piece.mesh.father_chess_info = {};
+		piece.mesh.father_chess_info[ "object" ] = piece;
+		piece.mesh.father_chess_info[ "type" ] = type;
 		pos_x = board[piece.x][piece.y].position.x;
 		pos_y = board[piece.x][piece.y].position.y + piece_height/2;
 		pos_z = board[piece.x][piece.y].position.z;
@@ -479,10 +624,8 @@ function set_board(){
 	for( var i = 0; i < 8; i++ ){
 		board.push([]);
 		for( var j = 0; j < 8; j++ ){
-			var r = (7*i+j)%2 * (-1) * 233;
-			var g = (7*i+j)%2 * (-1) * 233;
-			var b = (7*i+j)%2 * (-1) * 233;
-			var board_piece = new THREE.Mesh( new THREE.CubeGeometry( piece_size, piece_height, piece_size ), new THREE.MeshPhongMaterial({ color: new THREE.Color().setRGB( r, g, b).getHex(), shininess: 100 }) );
+			var color = (7*i+j)%2 == 0? "rgb(0,0,0)": "rgb(251,253,206)";
+			var board_piece = new THREE.Mesh( new THREE.CubeGeometry( piece_size, piece_height, piece_size ), new THREE.MeshPhongMaterial({ color: new THREE.Color( color ), shininess: 100 }) );
 			board_piece.receiveShadow = true;
 			board_piece.position.set( i*piece_margin - 4*piece_margin, 0, j*piece_margin - 4*piece_margin );
 			board[i].push( board_piece );
