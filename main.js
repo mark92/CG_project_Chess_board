@@ -284,6 +284,11 @@ var direction = 1;
 var virtual_board = [];
 var objects = [];
 var possible_moves = [];
+var nav_mesh = [];
+var moving_piece = false;
+var moved_piece;
+var projector = new THREE.Projector();
+
 
 //Rendering
 var clock = new THREE.Clock;
@@ -297,6 +302,7 @@ set_camera();
 set_skybox();
 set_lights();
 set_board();
+set_navigation_mesh();
 set_pieces();
 set_controls();
 
@@ -427,7 +433,9 @@ function set_controls(){
 		document.querySelector( ".play-menu-stop" ).className = rotate? "play-menu-stop": document.querySelector( ".play-menu-stop" ).className+" play-menu-unactive"; 
 	};
 
-	document.querySelector( "canvas" ).addEventListener( "click", function( event ) { select_piece( event ); } );
+	document.querySelector( "canvas" ).addEventListener( "mousedown", function( event ) { select_piece( event ); } );
+	document.querySelector( "canvas" ).addEventListener( "mousemove", function( event ) { analyze_movement( event ); } );
+	document.querySelector( "canvas" ).addEventListener( "mouseup", function( event ) { moving_piece = false; } );
 }
 
 function show_fps( delta ){
@@ -532,14 +540,16 @@ function set_materials_face_for( object ) {
 }
 
 function select_piece( event ){
+    event.preventDefault();
 	var vector = new THREE.Vector3( (event.clientX / window.innerWidth) * 2 - 1 , (event.clientY / window.innerHeight) * (-2) + 1 , 1);
-	var projector = new THREE.Projector();
 	var ray = projector.pickingRay( vector, camera );
 	var intersection = ray.intersectObjects( objects );
 	reset_board_squares();
 
 	if( intersection.length > 0 ){
+			use_navigation_mesh( intersection[ 0 ].point.y );
 			show_movement( intersection[ 0 ].object );
+			moving_piece = true;
 	}
 }
 
@@ -549,6 +559,8 @@ function show_movement( piece ){
 	var move;
 	var direction;
 	possible_moves = [];
+	moved_piece = piece;
+	possible_moves.push( {x: piece.father_chess_info.object.x, y: piece.father_chess_info.object.y } );
 	for( direction in piece_movements[ piece.father_chess_info.type ] ) {
 		for( movement in piece_movements[ piece.father_chess_info.type ][ direction ] ){
 
@@ -562,10 +574,38 @@ function show_movement( piece ){
 				}
 
 				board[ new_x ][	new_y ].material.color = new THREE.Color( "rgb(100,255,255)" );
-				possible_moves.push( move );
+				possible_moves.push( {x: new_x, y: new_y } );
 				
 				if( virtual_board[ new_x ][ new_y ].color != "empty" ){
 					break;
+				}
+			}
+		}
+	}
+}
+
+function use_navigation_mesh( y ){
+	for( piece in nav_mesh ){
+		nav_mesh[ piece ].position.y = piece_height;
+	}
+}
+
+function analyze_movement( event ){
+    event.preventDefault();
+	if( moving_piece ){
+		var vector = new THREE.Vector3( (event.clientX / window.innerWidth) * 2 - 1 , (event.clientY / window.innerHeight) * (-2) + 1 , 1);
+		var ray = projector.pickingRay( vector, camera );
+		var intersection = ray.intersectObjects( nav_mesh );
+
+		if( intersection.length > 0 ){
+			for( move in possible_moves ){
+				var selected_x = intersection[ 0 ].object.board_data.x;
+				var possible_x = possible_moves[ move ].x;
+				var selected_y = intersection[ 0 ].object.board_data.z;
+				var possible_y = possible_moves[ move ].y;
+				if( selected_x == possible_x && selected_y == possible_y ){
+					moved_piece.position.x = intersection[ 0 ].object.position.x;
+					moved_piece.position.z = intersection[ 0 ].object.position.z;
 				}
 			}
 		}
@@ -636,6 +676,20 @@ function set_board(){
 	board_base.position.set( -piece_margin/2, -0.2, -piece_margin/2 );
 	board_base.receiveShadow = true;
 	scene.add( board_base );
+}
+
+function set_navigation_mesh(){
+	for( var i = 0; i < 8; i++ ){
+		for( var j = 0; j < 8; j++ ){
+			var nav_mesh_piece = new THREE.Mesh( new THREE.CubeGeometry( piece_size, 0, piece_size ), new THREE.MeshBasicMaterial() );
+			nav_mesh_piece.material.transparent = true; 
+			nav_mesh_piece.material.opacity = 0; 
+			nav_mesh_piece.position.set( i*piece_margin - 4*piece_margin, 0, j*piece_margin - 4*piece_margin );
+			nav_mesh_piece.board_data = { x: i, z: j };
+			nav_mesh.push( nav_mesh_piece );
+			scene.add( nav_mesh_piece );
+		}
+	}
 }
 
 function set_renderer(){
