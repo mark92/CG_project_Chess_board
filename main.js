@@ -103,11 +103,11 @@ var pieces = {
 			},
 			horse: {
 				0: { x: 0, y: 1},
-				1: { x: 2, y: 5}
+				1: { x: 0, y: 6}
 			},
 			elephant: {
 				0: { x: 0, y: 2},
-				1: { x: 4, y: 1}
+				1: { x: 0, y: 5}
 			},
 			queen: {
 				0: { x: 0, y: 3}
@@ -120,7 +120,7 @@ var pieces = {
 				1: { x: 1, y: 1},
 				2: { x: 1, y: 2},
 				3: { x: 1, y: 3},
-				4: { x: 3, y: 4},
+				4: { x: 1, y: 4},
 				5: { x: 1, y: 5},
 				6: { x: 1, y: 6},
 				7: { x: 1, y: 7}
@@ -137,7 +137,7 @@ var pieces = {
 				1: { x: 7, y: 7}
 			},
 			horse: {
-				0: { x: 5, y: 2},
+				0: { x: 7, y: 1},
 				1: { x: 7, y: 6}
 			},
 			elephant: {
@@ -155,7 +155,7 @@ var pieces = {
 				1: { x: 6, y: 1},
 				2: { x: 6, y: 2},
 				3: { x: 6, y: 3},
-				4: { x: 4, y: 4},
+				4: { x: 6, y: 4},
 				5: { x: 6, y: 5},
 				6: { x: 6, y: 6},
 				7: { x: 6, y: 7}
@@ -569,6 +569,29 @@ function show_movement( piece ){
 			new_x = piece.father_chess_info.object.x + move.x;
 			new_y = piece.father_chess_info.object.y + move.z;
 
+			if( move.color ){
+				if( move.color != virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
+					break;
+				}
+				if( !move.special || move.special == "first_move"){
+					if( virtual_board[ new_x ][ new_y ].color != "empty" ){
+						break;
+					}
+				}
+			}
+
+			if( move.special ){
+				if( move.special == "first_move" ){
+					if( !piece.father_chess_info.first_move ){
+						break;
+					}
+				} else if( move.special == "attack"){
+					if( virtual_board[ new_x ][ new_y ].color == "empty" || virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
+						break;
+					}
+				}
+			}
+
 			if( new_x < 8 && new_x > -1 && new_y < 8 && new_y > -1 ){
 				if( virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
 					break;
@@ -641,6 +664,10 @@ function analyze_movement( event ){
 function end_movement(){
 	if( moving_piece ){
 		moving_piece = false;
+		if( moved_piece.father_chess_info.first_move ){
+			moved_piece.father_chess_info.first_move = false;
+		}
+
 		reset_board_squares();
 
 		var color = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color;
@@ -654,7 +681,6 @@ function end_movement(){
 		if( virtual_board[ selected_move.x ][ selected_move.y ].color != "empty" && !(selected_move.x == moved_piece.father_chess_info.object.x && selected_move.y == moved_piece.father_chess_info.object.y) ){
 			attack_particles();
 		}
-
 
 		virtual_board[  selected_move.x ][ selected_move.y ].color = color;
 		virtual_board[  selected_move.x ][ selected_move.y ].piece = piece;
@@ -710,7 +736,7 @@ function attack_particles(){
 	var dust_material = new THREE.ParticleBasicMaterial({ map: dust_texture, transparent: true, blending: THREE.NormalBlending, size: 20, color: 0x755a5a });
 
 	scene.remove( dust );
-	
+
 	dust = new THREE.ParticleSystem(dust_particles, dust_material);
 	dust.sortParticles = true;
 	dust.position.x = virtual_board[ selected_move.x ][ selected_move.y ].object.position.x;
@@ -763,6 +789,7 @@ function create_pieces( color, type, geometry, material ){
 		piece.mesh.father_chess_info = {};
 		piece.mesh.father_chess_info[ "object" ] = piece;
 		piece.mesh.father_chess_info[ "type" ] = type;
+		piece.mesh.father_chess_info[ "first_move" ] = true;
 		pos_x = board[piece.x][piece.y].position.x;
 		pos_y = board[piece.x][piece.y].position.y + piece_height/2;
 		pos_z = board[piece.x][piece.y].position.z;
