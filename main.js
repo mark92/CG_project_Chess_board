@@ -287,9 +287,8 @@ var possible_moves = [];
 var nav_mesh = [];
 var moving_piece = false;
 var moved_piece;
+var selected_move;
 var projector = new THREE.Projector();
-var lerp_to = { x: 0, z: 0 };
-var lerp_fast_to = { x: 0, z: 0 };
 
 
 //Rendering
@@ -437,7 +436,7 @@ function set_controls(){
 
 	document.querySelector( "canvas" ).addEventListener( "mousedown", function( event ) { select_piece( event ); } );
 	document.querySelector( "canvas" ).addEventListener( "mousemove", function( event ) { analyze_movement( event ); } );
-	document.querySelector( "canvas" ).addEventListener( "mouseup", function( event ) { moving_piece = false; } );
+	document.querySelector( "canvas" ).addEventListener( "mouseup", function( event ) { end_movement(); } );
 }
 
 function show_fps( delta ){
@@ -546,11 +545,8 @@ function select_piece( event ){
 	var vector = new THREE.Vector3( (event.clientX / window.innerWidth) * 2 - 1 , (event.clientY / window.innerHeight) * (-2) + 1 , 1);
 	var ray = projector.pickingRay( vector, camera );
 	var intersection = ray.intersectObjects( objects );
-	reset_board_squares();
 
 	if( intersection.length > 0 ){
-			lerp_to = { x: intersection[ 0 ].object.position.x, z: intersection[ 0 ].object.position.z };
-			lerp_fast_to = { x: intersection[ 0 ].object.position.x, z: intersection[ 0 ].object.position.z };
 			use_navigation_mesh( intersection[ 0 ].point.y );
 			show_movement( intersection[ 0 ].object );
 			moving_piece = true;
@@ -622,14 +618,32 @@ function analyze_movement( event ){
 
 				if( distance < shortest ){
 					shortest = distance;
-					lerp_to.x = board[ possible_x ][ possible_y ].position.x;
-					lerp_to.z = board[ possible_x ][ possible_y ].position.z;
+					moved_piece.father_chess_info.lerp_to.x = board[ possible_x ][ possible_y ].position.x;
+					moved_piece.father_chess_info.lerp_to.z = board[ possible_x ][ possible_y ].position.z;
+
+					selected_move = { x: possible_x, y: possible_y };
 				}
 			}
-			lerp_fast_to.x = intersection[ 0 ].point.x;
-			lerp_fast_to.z = intersection[ 0 ].point.z;
+			moved_piece.father_chess_info.lerp_fast_to.x = intersection[ 0 ].point.x;
+			moved_piece.father_chess_info.lerp_fast_to.z = intersection[ 0 ].point.z;
 		}
 	}
+}
+
+function end_movement(){
+	moving_piece = false;
+	reset_board_squares();
+
+	var color = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color;
+	var type = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].type;
+
+	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color = "empty";
+	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].type = "empty";
+	virtual_board[  selected_move.x ][ selected_move.y ].color = color;
+	virtual_board[  selected_move.x ][ selected_move.y ].type = type;
+
+	moved_piece.father_chess_info.object.x = selected_move.x;
+	moved_piece.father_chess_info.object.y = selected_move.y;
 }
 
 function reset_board_squares(){
@@ -641,21 +655,22 @@ function reset_board_squares(){
 	}
 }
 
-function interpolate_current_piece( delta ){
-	if( moved_piece ){
-		moved_piece.position.x += 2 * delta * ( lerp_to.x - moved_piece.position.x );
-		moved_piece.position.z += 2 * delta * ( lerp_to.z - moved_piece.position.z );
+function interpolate_pieces( delta ){
+	for( piece in objects ){
+		objects[ piece ].position.x += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.x - objects[ piece ].position.x );
+		objects[ piece ].position.z += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.z - objects[ piece ].position.z );
 	}
 }
 
-function interpolate_current_piece_fast( delta ){
+function interpolate_current_piece( delta ){
 	if( moved_piece ){
-		moved_piece.position.x += 4 * delta * ( lerp_fast_to.x - moved_piece.position.x );
-		moved_piece.position.z += 4 * delta * ( lerp_fast_to.z - moved_piece.position.z );
-		lerp_fast_to.x = moved_piece.position.x;
-		lerp_fast_to.z = moved_piece.position.z;
+		moved_piece.position.x += 4 * delta * ( moved_piece.father_chess_info.lerp_fast_to.x - moved_piece.position.x );
+		moved_piece.position.z += 4 * delta * ( moved_piece.father_chess_info.lerp_fast_to.z - moved_piece.position.z );
+		moved_piece.father_chess_info.lerp_fast_to.x = moved_piece.position.x;
+		moved_piece.father_chess_info.lerp_fast_to.z = moved_piece.position.z;
 	}
 }
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SCENE SETUP~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -690,6 +705,8 @@ function create_pieces( color, type, geometry, material ){
 		pos_x = board[piece.x][piece.y].position.x;
 		pos_y = board[piece.x][piece.y].position.y + piece_height/2;
 		pos_z = board[piece.x][piece.y].position.z;
+		piece.mesh.father_chess_info.lerp_to = { x: pos_x, z: pos_z };
+		piece.mesh.father_chess_info.lerp_fast_to = { x: pos_x, z: pos_z };
 		piece.mesh.position.set( pos_x, pos_y, pos_z );
 		type == "trooper"? piece.mesh.scale.set( 6, 6, 6 ): piece.mesh.scale.set( 10, 10, 10 );
 		scene.add( piece.mesh );
@@ -795,8 +812,8 @@ function render(){
 		camera.lookAt( board_base.position );
 	}
 
+	interpolate_pieces( delta );
 	interpolate_current_piece( delta );
-	interpolate_current_piece_fast( delta );
 
 	requestAnimationFrame( render );
 }
