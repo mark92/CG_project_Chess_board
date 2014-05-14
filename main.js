@@ -621,6 +621,13 @@ function analyze_movement( event ){
 					moved_piece.father_chess_info.lerp_to.x = board[ possible_x ][ possible_y ].position.x;
 					moved_piece.father_chess_info.lerp_to.z = board[ possible_x ][ possible_y ].position.z;
 
+					if( virtual_board[ possible_x ][ possible_y ].color != "empty" && !(possible_x == moved_piece.father_chess_info.object.x && possible_y == moved_piece.father_chess_info.object.y) ){
+						virtual_board[ possible_x ][ possible_y ].object.geometry.computeBoundingBox();
+						moved_piece.father_chess_info.lerp_to.y = virtual_board[ possible_x ][ possible_y ].object.geometry.boundingBox.max.y*10;
+					} else {
+						moved_piece.father_chess_info.lerp_to.y = piece_height/2;
+					}
+
 					selected_move = { x: possible_x, y: possible_y };
 				}
 			}
@@ -635,15 +642,23 @@ function end_movement(){
 	reset_board_squares();
 
 	var color = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color;
-	var type = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].type;
+	var piece = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece;
+	var object = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object;
 
 	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color = "empty";
-	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].type = "empty";
+	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece = "empty";
+	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object = null;
 	virtual_board[  selected_move.x ][ selected_move.y ].color = color;
-	virtual_board[  selected_move.x ][ selected_move.y ].type = type;
+	virtual_board[  selected_move.x ][ selected_move.y ].piece = piece;
+	scene.remove( virtual_board[  selected_move.x ][ selected_move.y ].object );
+	virtual_board[  selected_move.x ][ selected_move.y ].object = object;
 
 	moved_piece.father_chess_info.object.x = selected_move.x;
 	moved_piece.father_chess_info.object.y = selected_move.y;
+
+	moved_piece.father_chess_info.lerp_to.y = piece_height/2;
+
+	print_board();
 }
 
 function reset_board_squares(){
@@ -659,6 +674,7 @@ function interpolate_pieces( delta ){
 	for( piece in objects ){
 		objects[ piece ].position.x += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.x - objects[ piece ].position.x );
 		objects[ piece ].position.z += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.z - objects[ piece ].position.z );
+		objects[ piece ].position.y += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.y - objects[ piece ].position.y );
 	}
 }
 
@@ -705,8 +721,8 @@ function create_pieces( color, type, geometry, material ){
 		pos_x = board[piece.x][piece.y].position.x;
 		pos_y = board[piece.x][piece.y].position.y + piece_height/2;
 		pos_z = board[piece.x][piece.y].position.z;
-		piece.mesh.father_chess_info.lerp_to = { x: pos_x, z: pos_z };
-		piece.mesh.father_chess_info.lerp_fast_to = { x: pos_x, z: pos_z };
+		piece.mesh.father_chess_info.lerp_to = { x: pos_x, z: pos_z, y:pos_y };
+		piece.mesh.father_chess_info.lerp_fast_to = { x: pos_x, z: pos_z, y:pos_y };
 		piece.mesh.position.set( pos_x, pos_y, pos_z );
 		type == "trooper"? piece.mesh.scale.set( 6, 6, 6 ): piece.mesh.scale.set( 10, 10, 10 );
 		scene.add( piece.mesh );
@@ -780,7 +796,7 @@ function set_virtual_board(){
 	for( var i = 0; i < 8; i++ ){
 		virtual_board.push( [] );
 		for (var j = 0; j < 8; j++) {
-			virtual_board[ i ].push( { piece: "empty", color: "empty" } );
+			virtual_board[ i ].push( { piece: "empty", color: "empty", object: null } );
 		}
 	}
 
@@ -788,7 +804,7 @@ function set_virtual_board(){
 		for( type in pieces[ color ].types ){
 			for( unit in pieces[ color ].types[ type ] ){
 				var piece = pieces[ color ].types[ type ][ unit ];
-				virtual_board[ piece.x ][ piece.y ] = { piece: type, color: color };
+				virtual_board[ piece.x ][ piece.y ] = { piece: type, color: color, object: piece.mesh };
 				objects.push( piece.mesh );			
 			}
 		}
@@ -816,4 +832,25 @@ function render(){
 	interpolate_current_piece( delta );
 
 	requestAnimationFrame( render );
+}
+
+
+
+
+
+
+
+
+
+
+function print_board(){
+var pieces = { "horse": "H", "trooper": "t", "tower": "T", "queen": "Q", "king":"K","elephant":"E","empty":"."};
+var printer = "";
+	for( var i = 0; i< 8; i++){
+		for( var j = 7; j > -1; j--){
+			printer = pieces[virtual_board[i][j].piece]+ " " + printer;
+		}
+		printer = "\n" + printer;
+	}
+	console.log(printer);
 }
