@@ -296,6 +296,7 @@ var clock = new THREE.Clock;
 var angle = 0;
 var loading_bar;
 var load_progress = 0;
+var dust;
 
 //Main
 set_renderer();
@@ -638,27 +639,35 @@ function analyze_movement( event ){
 }
 
 function end_movement(){
-	moving_piece = false;
-	reset_board_squares();
+	if( moving_piece ){
+		moving_piece = false;
+		reset_board_squares();
 
-	var color = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color;
-	var piece = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece;
-	var object = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object;
+		var color = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color;
+		var piece = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece;
+		var object = virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object;
 
-	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color = "empty";
-	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece = "empty";
-	virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object = null;
-	virtual_board[  selected_move.x ][ selected_move.y ].color = color;
-	virtual_board[  selected_move.x ][ selected_move.y ].piece = piece;
-	scene.remove( virtual_board[  selected_move.x ][ selected_move.y ].object );
-	virtual_board[  selected_move.x ][ selected_move.y ].object = object;
+		virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].color = "empty";
+		virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].piece = "empty";
+		virtual_board[  moved_piece.father_chess_info.object.x ][ moved_piece.father_chess_info.object.y ].object = null;
 
-	moved_piece.father_chess_info.object.x = selected_move.x;
-	moved_piece.father_chess_info.object.y = selected_move.y;
+		if( virtual_board[ selected_move.x ][ selected_move.y ].color != "empty" && !(selected_move.x == moved_piece.father_chess_info.object.x && selected_move.y == moved_piece.father_chess_info.object.y) ){
+			attack_particles();
+		}
 
-	moved_piece.father_chess_info.lerp_to.y = piece_height/2;
 
-	print_board();
+		virtual_board[  selected_move.x ][ selected_move.y ].color = color;
+		virtual_board[  selected_move.x ][ selected_move.y ].piece = piece;
+		scene.remove( virtual_board[  selected_move.x ][ selected_move.y ].object );
+		virtual_board[  selected_move.x ][ selected_move.y ].object = object;
+
+		moved_piece.father_chess_info.object.x = selected_move.x;
+		moved_piece.father_chess_info.object.y = selected_move.y;
+
+		moved_piece.father_chess_info.lerp_to.y = piece_height/2;
+
+		print_board();
+	}
 }
 
 function reset_board_squares(){
@@ -675,6 +684,9 @@ function interpolate_pieces( delta ){
 		objects[ piece ].position.x += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.x - objects[ piece ].position.x );
 		objects[ piece ].position.z += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.z - objects[ piece ].position.z );
 		objects[ piece ].position.y += 2 * delta * ( objects[ piece ].father_chess_info.lerp_to.y - objects[ piece ].position.y );
+		if( !moving_piece ){
+			objects[ piece ].position.y += (10 - (objects[ piece ].father_chess_info.lerp_to.y - objects[ piece ].position.y)/10) * delta * ( objects[ piece ].father_chess_info.lerp_to.y - objects[ piece ].position.y );
+		}
 	}
 }
 
@@ -687,6 +699,39 @@ function interpolate_current_piece( delta ){
 	}
 }
 
+function attack_particles(){
+	var dust_particles = new THREE.Geometry;
+	for (var i = 0; i < 150; i++) {
+	    var particle = new THREE.Vector3(Math.random() * 32 - 16, Math.random() * 15, Math.random() * 32 - 16);
+	    dust_particles.vertices.push(particle);
+	}
+
+	var dust_texture = THREE.ImageUtils.loadTexture('assets/dust.png');
+	var dust_material = new THREE.ParticleBasicMaterial({ map: dust_texture, transparent: true, blending: THREE.NormalBlending, size: 20, color: 0x755a5a });
+
+	scene.remove( dust );
+	
+	dust = new THREE.ParticleSystem(dust_particles, dust_material);
+	dust.sortParticles = true;
+	dust.position.x = virtual_board[ selected_move.x ][ selected_move.y ].object.position.x;
+	dust.position.z = virtual_board[ selected_move.x ][ selected_move.y ].object.position.z;
+	dust.position.y = -5;
+	 
+	scene.add(dust);
+}
+
+function animate_attack_particles( delta ){
+	var particle_count = dust.geometry.vertices.length;
+	while (particle_count--) {
+	    var particle = dust.geometry.vertices[particle_count];
+	    if (particle.y >= 10) {
+	        dust.material.opacity -= delta/100;
+	    } else {
+		    particle.y += Math.random() * 10 * delta;
+	    }
+	}
+	dust.geometry.__dirtyVertices = true;
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SCENE SETUP~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -830,6 +875,8 @@ function render(){
 
 	interpolate_pieces( delta );
 	interpolate_current_piece( delta );
+	if( dust )
+		animate_attack_particles( delta );
 
 	requestAnimationFrame( render );
 }
