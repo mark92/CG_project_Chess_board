@@ -288,6 +288,8 @@ var nav_mesh = [];
 var moving_piece = false;
 var moved_piece;
 var projector = new THREE.Projector();
+var lerp_to = { x: 0, z: 0 };
+var lerp_fast_to = { x: 0, z: 0 };
 
 
 //Rendering
@@ -547,6 +549,8 @@ function select_piece( event ){
 	reset_board_squares();
 
 	if( intersection.length > 0 ){
+			lerp_to = { x: intersection[ 0 ].object.position.x, z: intersection[ 0 ].object.position.z };
+			lerp_fast_to = { x: intersection[ 0 ].object.position.x, z: intersection[ 0 ].object.position.z };
 			use_navigation_mesh( intersection[ 0 ].point.y );
 			show_movement( intersection[ 0 ].object );
 			moving_piece = true;
@@ -598,16 +602,32 @@ function analyze_movement( event ){
 		var intersection = ray.intersectObjects( nav_mesh );
 
 		if( intersection.length > 0 ){
+			var shortest = 65535;
 			for( move in possible_moves ){
-				var selected_x = intersection[ 0 ].object.board_data.x;
+				// var selected_x = intersection[ 0 ].object.board_data.x;
+				// var possible_x = possible_moves[ move ].x;
+				// var selected_y = intersection[ 0 ].object.board_data.z;
+				// var possible_y = possible_moves[ move ].y;
+				// if( selected_x == possible_x && selected_y == possible_y ){
+				// 	lerp_to.x = intersection[ 0 ].object.position.x;
+				// 	lerp_to.z = intersection[ 0 ].object.position.z;
+				// }
 				var possible_x = possible_moves[ move ].x;
-				var selected_y = intersection[ 0 ].object.board_data.z;
 				var possible_y = possible_moves[ move ].y;
-				if( selected_x == possible_x && selected_y == possible_y ){
-					moved_piece.position.x = intersection[ 0 ].object.position.x;
-					moved_piece.position.z = intersection[ 0 ].object.position.z;
+
+				var x_dist = board[ possible_x ][ possible_y ].position.x - intersection[ 0 ].point.x;
+				var y_dist = board[ possible_x ][ possible_y ].position.z - intersection[ 0 ].point.z;
+
+				var distance = Math.sqrt( x_dist*x_dist + y_dist*y_dist);
+
+				if( distance < shortest ){
+					shortest = distance;
+					lerp_to.x = board[ possible_x ][ possible_y ].position.x;
+					lerp_to.z = board[ possible_x ][ possible_y ].position.z;
 				}
 			}
+			lerp_fast_to.x = intersection[ 0 ].point.x;
+			lerp_fast_to.z = intersection[ 0 ].point.z;
 		}
 	}
 }
@@ -618,6 +638,22 @@ function reset_board_squares(){
 			var color = (7*i+j)%2 == 0? "rgb(0,0,0)": "rgb(251,253,206)";
 			board[ i ][ j ].material.color = new THREE.Color( color );
 		}
+	}
+}
+
+function interpolate_current_piece( delta ){
+	if( moved_piece ){
+		moved_piece.position.x += 2 * delta * ( lerp_to.x - moved_piece.position.x );
+		moved_piece.position.z += 2 * delta * ( lerp_to.z - moved_piece.position.z );
+	}
+}
+
+function interpolate_current_piece_fast( delta ){
+	if( moved_piece ){
+		moved_piece.position.x += 4 * delta * ( lerp_fast_to.x - moved_piece.position.x );
+		moved_piece.position.z += 4 * delta * ( lerp_fast_to.z - moved_piece.position.z );
+		lerp_fast_to.x = moved_piece.position.x;
+		lerp_fast_to.z = moved_piece.position.z;
 	}
 }
 
@@ -758,6 +794,9 @@ function render(){
 		camera.position.set( x, 160, z );
 		camera.lookAt( board_base.position );
 	}
+
+	interpolate_current_piece( delta );
+	interpolate_current_piece_fast( delta );
 
 	requestAnimationFrame( render );
 }
