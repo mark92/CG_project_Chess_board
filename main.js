@@ -286,9 +286,13 @@ var objects = [];
 var possible_moves = [];
 var nav_mesh = [];
 var moving_piece = false;
+var moving_camera = false;
 var moved_piece;
 var selected_move;
 var projector = new THREE.Projector();
+var previous_camera = { x: 0, y: 0};
+var angle_x = 0;
+var angle_y = 0;
 
 
 //Rendering
@@ -551,6 +555,9 @@ function select_piece( event ){
 			use_navigation_mesh( intersection[ 0 ].point.y );
 			show_movement( intersection[ 0 ].object );
 			moving_piece = true;
+	} else {
+		moving_camera = true;
+		rotate = false;
 	}
 }
 
@@ -561,7 +568,9 @@ function show_movement( piece ){
 	var direction;
 	possible_moves = [];
 	moved_piece = piece;
+	selected_move = { x: piece.father_chess_info.object.x, y: piece.father_chess_info.object.y };
 	possible_moves.push( {x: piece.father_chess_info.object.x, y: piece.father_chess_info.object.y } );
+	console.log( piece.father_chess_info.type);
 	for( direction in piece_movements[ piece.father_chess_info.type ] ) {
 		for( movement in piece_movements[ piece.father_chess_info.type ][ direction ] ){
 
@@ -569,30 +578,31 @@ function show_movement( piece ){
 			new_x = piece.father_chess_info.object.x + move.x;
 			new_y = piece.father_chess_info.object.y + move.z;
 
-			if( move.color ){
-				if( move.color != virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
-					break;
-				}
-				if( !move.special || move.special == "first_move"){
-					if( virtual_board[ new_x ][ new_y ].color != "empty" ){
-						break;
-					}
-				}
-			}
-
-			if( move.special ){
-				if( move.special == "first_move" ){
-					if( !piece.father_chess_info.first_move ){
-						break;
-					}
-				} else if( move.special == "attack"){
-					if( virtual_board[ new_x ][ new_y ].color == "empty" || virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
-						break;
-					}
-				}
-			}
 
 			if( new_x < 8 && new_x > -1 && new_y < 8 && new_y > -1 ){
+				if( move.color ){
+					if( move.color != virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
+						break;
+					}
+					if( !move.special || move.special == "first_move"){
+						if( virtual_board[ new_x ][ new_y ].color != "empty" ){
+							break;
+						}
+					}
+				}
+
+				if( move.special ){
+					if( move.special == "first_move" ){
+						if( !piece.father_chess_info.first_move ){
+							break;
+						}
+					} else if( move.special == "attack"){
+						if( virtual_board[ new_x ][ new_y ].color == "empty" || virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
+							break;
+						}
+					}
+				}
+				
 				if( virtual_board[ new_x ][ new_y ].color == virtual_board[ piece.father_chess_info.object.x ][ piece.father_chess_info.object.y ].color ){
 					break;
 				}
@@ -658,7 +668,24 @@ function analyze_movement( event ){
 			moved_piece.father_chess_info.lerp_fast_to.x = intersection[ 0 ].point.x;
 			moved_piece.father_chess_info.lerp_fast_to.z = intersection[ 0 ].point.z;
 		}
+	} else if( moving_camera ){
+			direction = 1;
+
+			var delta_x = event.clientX - previous_camera.x;
+			var delta_y = event.clientY - previous_camera.y;
+
+			angle_x += direction * delta_x/200;
+			angle_y += direction * delta_y/200;
+
+			var x = 300 * Math.cos( angle_x ) * Math.sin( angle_y );
+			var z = 300 * Math.sin( angle_x ) * Math.sin( angle_y );
+			var y = 300 * Math.cos( angle_y );
+
+			camera.position.set( x, y, z );
+			camera.lookAt( board_base.position );
 	}
+	previous_camera.x = event.clientX;
+	previous_camera.y = event.clientY;
 }
 
 function end_movement(){
@@ -680,11 +707,18 @@ function end_movement(){
 
 		if( virtual_board[ selected_move.x ][ selected_move.y ].color != "empty" && !(selected_move.x == moved_piece.father_chess_info.object.x && selected_move.y == moved_piece.father_chess_info.object.y) ){
 			attack_particles();
+			play_sound_attack();
+			
+			scene.remove( virtual_board[  selected_move.x ][ selected_move.y ].object );
+			for( objecti in objects ){
+				if( objects[ objecti ].father_chess_info.object.x == selected_move.x && objects[ objecti ].father_chess_info.object.y == selected_move.y ){
+					objects.splice(objecti, 1);				
+				}
+			}
 		}
 
 		virtual_board[  selected_move.x ][ selected_move.y ].color = color;
 		virtual_board[  selected_move.x ][ selected_move.y ].piece = piece;
-		scene.remove( virtual_board[  selected_move.x ][ selected_move.y ].object );
 		virtual_board[  selected_move.x ][ selected_move.y ].object = object;
 
 		moved_piece.father_chess_info.object.x = selected_move.x;
@@ -693,6 +727,8 @@ function end_movement(){
 		moved_piece.father_chess_info.lerp_to.y = piece_height/2;
 
 		print_board();
+	} else if( moving_camera ){
+		moving_camera = false;
 	}
 }
 
@@ -927,4 +963,10 @@ var printer = "";
 		printer = "\n" + printer;
 	}
 	console.log(printer);
+}
+
+var asset = document.createElement("audio");
+asset.src = "assets/attack_hit.mp3";
+function play_sound_attack(){
+	asset.play();
 }
