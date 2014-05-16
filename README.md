@@ -63,3 +63,18 @@ since you can't really modify the material to be a face material after
 creating a mesh. In the case of tower pieces, we do the same, but first we
 edit the materialIndex of it's geometery's face's to represent the different
 materials. 
+
+* Interaction
+After a mouse click, the camera shoots a laser of death through the cursor.
+If the laser hits a chess piece - movement starts, if not, we assume you
+wanted to move the camera, so camera movement starts.
+
+* Piece movement
+If we are moving a piece, another laser shoots every time we move the mouse.
+The lasers checks for collisions with the board squares, if a square is hit
+it is assumed as a desirable movement location. Also a lot of conditioning
+happens about available moves etc. When the piece is released it just relo-
+cates and some cleaning stuff happens.
+
+* Camera movement
+Camera movement uses the spehere parametrical equation, there isn't much to it.

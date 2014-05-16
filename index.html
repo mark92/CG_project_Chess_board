@@ -1,10 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<link rel="stylesheet" type="text/css" href="./style.css">
-	<script type="text/javascript" src="./three.js"></script>
+	<link rel="stylesheet" type="text/css" href="./stylesheets/style.css">
+
+	<script type="text/javascript" src="./javascripts/stuff/three.js"></script>
+	<script type="text/javascript" src="./javascripts/stuff/misc.js"></script>
+
+	<script type="text/javascript" src="./javascripts/vars_init.js"></script>
+	<script type="text/javascript" src="./javascripts/vars_logical_piece_data.js"></script>
+
+	<script type="text/javascript" src="./javascripts/scene_setup.js"></script>
+	<script type="text/javascript" src="./javascripts/UI.js"></script>
+
+	<script type="text/javascript" src="./javascripts/features/shading.js"></script>
+	<script type="text/javascript" src="./javascripts/features/interaction/click_analysis.js"></script>
+	<script type="text/javascript" src="./javascripts/features/interaction/drag_analysis.js"></script>
+	<script type="text/javascript" src="./javascripts/features/interaction/click_stop_analysis.js"></script>
+	
+	<script type="text/javascript" src="./javascripts/main.js"></script>
 </head>
-<body onload="after_load();">
+<body onload="main();">
 	<div class="play-menu">
 		<div class="play-menu-left">A</div>
 		<div class="play-menu-stop">S</div>
@@ -27,6 +42,5 @@
 		<div class="loading-bar-loader"></div>
 	</div>
 
-	<script type="text/javascript" src="./main.js"></script>
 </body>
 </html>
