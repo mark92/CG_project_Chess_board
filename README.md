@@ -2,6 +2,7 @@ CG_project_Chess_board
 ======================
 
 3D webgl chess board with pieces, made by Mark Ganusevich
+Demo: http://mark92.github.io/CG_project_Chess_board/
 
 Models made with: Blender, exported to .obj and converted
 with convert_obj_three.py; 
